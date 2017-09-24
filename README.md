@@ -14,8 +14,9 @@ mvn org.codehaus.mojo:exec-maven-plugin:exec -Dexec.executable=java \
 	-Dexec.args="-cp %classpath io.vertx.core.Launcher run test.project1.Server"
 ```
 
-To test:
-
+Tested using Postman on the following address:
 ```
-curl -D- http://localhost:8080/analyze
+http://localhost:8080/analyze
 ```
+Parameters:
+name: 'text', type: string
