@@ -1,8 +1,7 @@
 # This is Simple Vert.x-web Server for word analysis - test assignment
 
 Used maven dependencies are:
-vertx-web
-jackson-databind
+vertx-web and jackson-databind
 
 To compile and run:
 
