@@ -1,21 +1,13 @@
 package test.project1;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.io.*;
+import java.util.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.vertx.core.*;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.*;
 import io.vertx.ext.web.*;
 import io.vertx.ext.web.handler.BodyHandler;
 
