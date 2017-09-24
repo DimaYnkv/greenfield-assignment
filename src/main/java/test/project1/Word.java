@@ -5,9 +5,12 @@ public class Word {
 	private String text;
 	private int totalCharVal;
 	
+	public Word() {
+	}
+	
 	public Word(String text) {
 		this.text = text;
-		this.setTotalCharVal(text);
+		this.setTotalCharVal();
 	}
 	
 	public int getTotalCharVal() {
@@ -22,13 +25,17 @@ public class Word {
 		this.text = text;
 	}
 
-	private void setTotalCharVal(String text) {
+	private void setTotalCharVal() {
 		int totalCharVal = 0;
-		
 		for(char letter : text.toCharArray()) {
 			totalCharVal += letter - 96;
 		}
 		
 		this.totalCharVal = totalCharVal;
+	}
+	
+	@Override
+	public String toString() {
+		return "(" + this.getText() +", " + this.getTotalCharVal() + ")";
 	}
 }

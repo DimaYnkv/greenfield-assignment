@@ -1,45 +1,33 @@
 package test.project1;
 
 import java.io.File;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.vertx.core.*;
-import io.vertx.core.http.*;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.*;
 import io.vertx.ext.web.handler.BodyHandler;
 
-import io.vertx.ext.mongo.MongoClient;
-
-public class Server extends AbstractVerticle{
+public class Server extends AbstractVerticle {
 
 	private Router router;
-	
-	//temp data struct
-	private Map<Integer, Word> words = new LinkedHashMap<>();
+	private final String FILENAME = System.getProperty("user.dir") + "/testing.json";
 
 	@Override
-	public void start(Future<Void> fut) throws Exception{
-		System.out.println("##################in the program , bitch!########");
-		MongoClient client = MongoClient.createShared(vertx, config);
-		///TODO:get all words from file
-		this.createSomeData();
-		
+	public void start(Future<Void> fut) throws Exception {
 		router = Router.router(vertx);
-		
-//		router.route("/analyze").handler(routingContext -> {
-//			HttpServerResponse response = routingContext.response();
-//			response.putHeader("content-type", "text/html")
-//				.end("<h1>Hello from eclipse!</h1>");
-//		});
-
-		vertx.createHttpServer().requestHandler(router::accept)
-			.listen(
-				config().getInteger("http.port", 8080),
+		vertx.createHttpServer().requestHandler(router::accept).listen(config().getInteger("http.port", 8080),
 				result -> {
 					if (result.succeeded()) {
 						fut.complete();
@@ -47,54 +35,126 @@ public class Server extends AbstractVerticle{
 						fut.fail(result.cause());
 					}
 				});
-		System.out.println("calling  GET !");
-//		router.route("/analyze").handler(BodyHandler.create());
-//		router.post("/analyze").handler(this::getAll);
+		
 		router.route("/analyze").handler(BodyHandler.create());
-		router.post("/analyze").handler(this::addWord);
+		router.post("/analyze").handler(this::solution);
+	}
+
+	private void solution(RoutingContext routingContext) {
+		String text = routingContext.request().getParam("text");
 		
-//		this.saveToFile("textttt test");
-	}
-	
-	//temp:
-	private void getAll(RoutingContext routingContext) {
-		System.out.println("inside getAll");
-		  routingContext.response()
-	      .putHeader("content-type", "application/json; charset=utf-8")
-	      .end(Json.encodePrettily(words.values()));
-		 
-	}
-	
-	private void createSomeData() {
-		System.out.println("creating some sample data");
-		  Word word1 = new Word("abc");
-		  words.put(0, word1);
-		  Word word2 = new Word("whiskey");
-		  words.put(1, word2);
-	}
-	
-	private void addWord(RoutingContext routingContext) {
-//		System.out.println("in the addWord !" + routingContext.getBodyAsString());'
+		JsonObject jsonResponse = new JsonObject();
+		Word newWord = new Word(text);
+
+		SortedSet<Word> treeValues = new TreeSet<Word>(Comparator.comparing(Word::getTotalCharVal));
+		SortedSet<Word> treeLexical = new TreeSet<Word>(Comparator.comparing(Word::getText));
+
+		List<Word> words = this.getAll();
 		
-		String word = routingContext.request().getParam("text");
-		System.out.println("new word: " + word);
-		Word w = new Word(word);
-		words.put(2, w);
+		treeValues.addAll(words);
+		treeLexical.addAll(words);
+
+		Word closestValue = new Word();
+		Word closestLexical = new Word();
+		if (!treeValues.isEmpty()) {
+			String resultValues = this.getClosestTotalVal(treeValues, newWord);
+			String resultLexical = this.getClosestLexical(treeLexical, newWord);
+
+			closestValue.setText(resultValues);
+			closestLexical.setText(resultLexical);		
+
+		}
 		
-		routingContext.response()
-			.putHeader("content-type", "application/json; charset=utf-8")
-			.end(Json.encodePrettily(words.values()));
+		jsonResponse.put("value", closestValue.getText());
+		jsonResponse.put("lexical", closestLexical.getText());
 		
+		if(!treeLexical.contains(newWord)) {
+			try {
+				this.saveToFile(newWord);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}	
+		}
+
+		routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
+				.end(Json.encodePrettily(jsonResponse));
 	}
 	
-	//TODO: consider mongoDB
-	private void saveToFile(String text) {
-		System.out.println("in the savetofile !");
-		String fileName = "text.txt";
-		File file = new File(fileName);
+	private String getClosestTotalVal(SortedSet<Word> set, Word word) {
+		Iterator<Word> it = set.iterator();
+
+		Word wMinDist = (Word) it.next();
+		int minDist = Math.abs(wMinDist.getTotalCharVal() - word.getTotalCharVal());
+
+		while(it.hasNext()) {
+			Word w = (Word)it.next();
+			int dist = Math.abs(w.getTotalCharVal() - word.getTotalCharVal());
+			if(minDist > dist) {
+				minDist = dist;
+				wMinDist = w;
+			}
+		}
+		
+		return wMinDist.getText();
 	}
 	
-	///TODO: a method to return 
-	//
-	
+	private String getClosestLexical(SortedSet<Word> set, Word word) {
+		Iterator<Word> it = set.iterator();
+
+		Word wMinDist = (Word) it.next();
+		int minDist = Math.abs(wMinDist.getText().compareTo(word.getText()));
+
+		while(it.hasNext()) {
+			Word w = (Word)it.next();
+			int dist = Math.abs(w.getText().compareTo(word.getText()));
+			if(minDist > dist) {
+				minDist = dist;
+				wMinDist = w;
+			}
+		}
+		
+		return wMinDist.getText();
+	}
+
+	private List<Word> getAll() {
+		File file = new File(FILENAME);
+		ObjectMapper mapper = new ObjectMapper();
+		List<Word> words = new ArrayList<>();
+
+		if (file.exists()) {
+			try {
+				words = mapper.readValue(file, new TypeReference<ArrayList<Word>>() {
+				});
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return words;
+	}
+
+	private void saveToFile(Word word) throws IOException {
+		File file = new File(FILENAME);		
+		ObjectMapper mapper = new ObjectMapper();
+
+		if (!file.exists()) {
+			List<Word> words = new ArrayList<>();
+			words.add(word);			
+			mapper.writeValue(new File(FILENAME), words);
+		} else {
+			RandomAccessFile raf = new RandomAccessFile(FILENAME, "rw");
+			long pos = raf.length();
+			while (raf.length() > 0) {
+				pos--;
+				raf.seek(pos);
+				if (raf.readByte() == ']') {
+					raf.seek(pos);
+					break;
+				}
+			}
+			String newWord = mapper.writeValueAsString(word);
+			raf.writeBytes("," + newWord + "]");
+			raf.close();
+		}
+	}
 }
