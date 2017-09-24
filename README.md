@@ -19,4 +19,6 @@ Tested using Postman on the following address:
 http://localhost:8080/analyze
 ```
 Parameters:
+```
 name: 'text', type: string
+```
